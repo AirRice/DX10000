@@ -1,0 +1,45 @@
+
+# DX10000
+################################################################
+
+A ESP32 Program that reads a modified General MIDI file and sends note messages to an array of piezo buzzers, coupled with the internal drum machine synth of the VS1053.
+
+Lovingly named after the DX series of chips portrayed in the game Shenzhen IO
+
+## Documentation ################################################################
+
+The program automatically reads in a Type 0 or 1 .mid (General MIDI) file from a micro SD card and plays it back on an array of 8 piezo buzzers.
+
+![Image of Hardware](./images/hardware.jpg)
+
+Upon the program loop being initiated, the midi file is internally parsed in real time and played back on the buzzers (with the internal VS1053 synthesizer acting as a backup if the 8 buzzers cannot play the track for whatever reason:
+
+* Drum tracks in midis are arranged in the same way as other tracks, with each drum type corresponding to a normal midi note. This would mean that if they are played over the buzzers it would sound very wrong, and therefore will be played over the VS1053's internal midi synth.
+* If the midi track is beyond the scope of the buzzers (Buzzers will only play tracks 0-7) It will be played on the internal midi synth as a fallback. The number of buzzers is limited by the number of PWM timers in the esp32 chip.
+
+* As each buzzer can only make one note at a time, the program struggles with multiple notes playing on the same track at the same timestamp. It will overwrite whatever was meant to play on the same track with the latest note in the midi file.
+
+![Serial debug output showing the notes being parsed](./images/serial.jpg)
+
+The nature of the parsing process means that every midi track is being iterated over at the same time, multiple times per second. When the tracks have a high number of notes in them, this causes significant delays in the algorithm and brings an unintended "ritardando" effect to the music. Any further improvements to the code should look primarily on optimising, and maybe preprocessing the parsing step such that less time is spent iterating over the various program loops.
+
+Hardware demo: https://www.youtube.com/watch?v=MiHWaxBJmgA
+
+#### Pinout ################################################################
+
+In order of each MIDI channel (0-7), the GPIO pins used from the ESP32 processor (Adafruit HUZZAH32 featherwing) are as follows:
+26, 25, 4, 21, 13, 27, 15, 14
+
+#### Running the code ################################################################
+
+The code has been primarily written using the Arduino IDE on windows, and it should be built and uploaded using the normal arduino IDE process of opening the file within the IDE, with ESP32 board support installed.
+
+The midi file should be transferred onto the device using a standard micro SD card; The program lists the midi file to read on the top and this string should be changed to whatever the target midi file is.
+
+An example file that works with the device is provided in ./examples.
+
+#### Special Thanks and References ################################################################
+
+A large chunk of the MIDI file parsing code was modified from Len Shustek's Miditones Code. https://github.com/LenShustek/miditones 
+
+A lot of knowledge on MIDI file structure was referenced from Dr. Sebastian A. Birch's website found at http://personal.kent.edu/~sbirch/Music_Production/MP-II/MIDI/midi_protocol.htm , and http://www.music.mcgill.ca/~ich/classes/mumt306/StandardMIDIfileformat.html. MIDI files utilise some interesting optimisation methods such as variable length integers and it would have been impossible to understand them without these resources.
